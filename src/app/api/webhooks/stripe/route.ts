@@ -1,8 +1,10 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { prisma } from "@/lib/db";
 import Stripe from "stripe";
+
+// TODO: Import your new database client here
+// import { db } from "@/lib/db"; 
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -21,56 +23,36 @@ export async function POST(req: Request) {
         return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
     }
 
-    const session = event.data.object as Stripe.Checkout.Session;
-
+    // Handle "invoice.payment_succeeded"
     if (event.type === "invoice.payment_succeeded") {
         const invoice = event.data.object as Stripe.Invoice;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const subscriptionId = (invoice as any).subscription as string;
         const customerId = invoice.customer as string;
 
         if (subscriptionId) {
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-            await prisma.user.updateMany({
-                where: {
-                    stripeCustomerId: customerId,
-                },
-                data: {
-                    subscriptionStatus: "active",
-                    stripeSubscriptionId: subscriptionId,
-                },
-            });
+            // Logic to update user status to "active"
+            // Example: await db.execute('UPDATE User SET subscriptionStatus = "active"...')
+            console.log(`Updating user ${customerId} to active`);
         }
     }
 
+    // Handle "customer.subscription.updated"
     if (event.type === "customer.subscription.updated") {
         const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
 
-        await prisma.user.updateMany({
-            where: {
-                stripeCustomerId: subscription.customer as string,
-            },
-            data: {
-                subscriptionStatus: subscription.status,
-                stripeSubscriptionId: subscription.id,
-            },
-        });
+        // Logic to sync the Stripe status (e.g., "past_due", "trailing") to your DB
+        console.log(`Updating user ${customerId} status to ${subscription.status}`);
     }
 
+    // Handle "customer.subscription.deleted"
     if (event.type === "customer.subscription.deleted") {
         const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
 
-        await prisma.user.updateMany({
-            where: {
-                stripeCustomerId: subscription.customer as string,
-            },
-            data: {
-                subscriptionStatus: "inactive",
-                stripeSubscriptionId: null,
-            },
-        });
+        // Logic to mark subscription as inactive/null
+        console.log(`User ${customerId} subscription deleted`);
     }
 
-    return new NextResponse(null, { status: 200 });
+    return new NextResponse("Webhook Received", { status: 200 });
 }
