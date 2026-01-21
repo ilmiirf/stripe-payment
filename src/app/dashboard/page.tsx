@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, LogOut, User, CreditCard } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 
-export default function DashboardPage() {
+function DashboardContent() {
     const { data: session, status, update } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -72,7 +72,7 @@ export default function DashboardPage() {
                                 <p className="text-xs text-gray-500">{user.email}</p>
                             </div>
                             <Button
-                                onClick={() => signOut({ callbackUrl: "/" })}
+                                onClick={() => signOut({ callbackUrl: "/api/auth/signout" })}
                                 variant="outline"
                                 size="sm"
                             >
@@ -82,18 +82,20 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </div>
-            </header>
+            </header >
 
             {/* Success Message */}
-            {showSuccess && (
-                <div className="bg-green-50 border-l-4 border-green-500 p-4">
-                    <div className="container mx-auto px-4">
-                        <p className="text-green-800 font-medium">
-                            🎉 Payment successful! Your subscription is now active.
-                        </p>
+            {
+                showSuccess && (
+                    <div className="bg-green-50 border-l-4 border-green-500 p-4">
+                        <div className="container mx-auto px-4">
+                            <p className="text-green-800 font-medium">
+                                🎉 Payment successful! Your subscription is now active.
+                            </p>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Main Content */}
             <main className="flex-1 container mx-auto px-4 py-8">
@@ -209,6 +211,18 @@ export default function DashboardPage() {
                     </Card>
                 </div>
             </main>
-        </div>
+        </div >
+    );
+}
+
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            </div>
+        }>
+            <DashboardContent />
+        </Suspense>
     );
 }
